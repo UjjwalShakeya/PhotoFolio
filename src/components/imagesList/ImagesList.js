@@ -8,7 +8,7 @@ import { Carousel } from "../carousel/Carousel";
 import { toast } from "react-toastify";
 
 // importing firebase services
-import { addImage } from "../../services/images.service";
+import { addImage, subscribeToImages } from "../../services/images.service";
 
 export const ImagesList = ({ albumName, onBack }) => {
 
@@ -19,9 +19,22 @@ export const ImagesList = ({ albumName, onBack }) => {
   const searchInput = useRef();
 
   // async function
-  const getImages = async () => {
+  useEffect(() => {
+    setLoading(true);
+    const unsub = subscribeToImages((snapshot) => {
+      const imageData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setImages(imageData);
+      setLoading(false);
+    }, (error) => {
+      console.log(error);
+      setLoading(false);
+    })
 
-  };
+
+  }, []);
 
   const [addImageIntent, setAddImageIntent] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
