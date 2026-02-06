@@ -4,17 +4,20 @@ import Spinner from "react-spinner-material";
 import { ImageForm } from "../imageForm/ImageForm";
 import { Carousel } from "../carousel/Carousel";
 
-// firebase hooks
-import {addDoc} from "firebase/firestore";
+// importing toaster 
+import { toast } from "react-toastify";
 
-export const ImagesList = ({albumName,onBack}) => {
+// importing firebase services
+import { addImage } from "../../services/images.service";
+
+export const ImagesList = ({ albumName, onBack }) => {
 
   //These state and functions are create just for your convience you can create modify or delete the state as per your requirement.
   const [images, setImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchIntent, setSearchIntent] = useState(false);
   const searchInput = useRef();
-  
+
   // async function
   const getImages = async () => {
 
@@ -33,7 +36,7 @@ export const ImagesList = ({albumName,onBack}) => {
   const handlePrev = () => {
   };
   // function to handle cancel  
-  const handleCancel = () => {};
+  const handleCancel = () => { };
   // function to handle search functionality for image
   const handleSearchClick = () => {
   };
@@ -42,8 +45,14 @@ export const ImagesList = ({albumName,onBack}) => {
   };
 
   // async functions
-  const handleAdd = async () => {
-    console.log();
+  const handleAdd = async (title, imageUrl) => {
+    try {
+      await addImage(title, imageUrl);
+      toast.success("image added successfully");
+    } catch (error) {
+      toast.error("Could not create image");
+      console.log(error);
+    }
   };
 
   // function to handle update image
@@ -63,7 +72,7 @@ export const ImagesList = ({albumName,onBack}) => {
           <h3>No images found in the album.</h3>
           <button
             className={`${addImageIntent && styles.active}`}
-            onClick={() => setAddImageIntent(prev=> !prev)}
+            onClick={() => setAddImageIntent(prev => !prev)}
           >
             {!addImageIntent ? "Add image" : "Cancel"}
           </button>
@@ -152,9 +161,8 @@ export const ImagesList = ({albumName,onBack}) => {
               onClick={() => setActiveImageIndex(i)}
             >
               <div
-                className={`${styles.update} ${
-                  activeHoverImageIndex === i && styles.active
-                }`}
+                className={`${styles.update} ${activeHoverImageIndex === i && styles.active
+                  }`}
                 onClick={(e) => {
                   e.stopPropagation();
                   setUpdateImageIntent(image);
@@ -163,9 +171,8 @@ export const ImagesList = ({albumName,onBack}) => {
                 <img src="/assets/edit.png" alt="update" />
               </div>
               <div
-                className={`${styles.delete} ${
-                  activeHoverImageIndex === i && styles.active
-                }`}
+                className={`${styles.delete} ${activeHoverImageIndex === i && styles.active
+                  }`}
                 onClick={(e) => handleDelete(e, image.id)}
               >
                 <img src="/assets/trash-bin.png" alt="delete" />
