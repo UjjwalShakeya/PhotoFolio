@@ -1,16 +1,18 @@
-import { addDoc, collection, serverTimestamp, onSnapshot } from "firebase/firestore";
+import { addDoc, collection, serverTimestamp, onSnapshot, where, query } from "firebase/firestore";
 import { db } from "../firebase";
 
 
 
-export const subscribeToImages = async (callBack, error) => {
-    return onSnapshot(collection(db, 'images'), callBack, error);
+export const subscribeToImages = async (albumName, callBack, error) => {
+    const q = query(collection(db, 'images'), where("albumName", "==", albumName))
+    return onSnapshot(q, callBack, error);
 }
 
-export const addImage = async (title, imageUrl) => {
+export const addImage = async (albumName, title, imageUrl) => {
     await addDoc(collection(db, 'images'), {
         title,
         url: imageUrl,
+        albumName,
         created_At: serverTimestamp()
     });
 }

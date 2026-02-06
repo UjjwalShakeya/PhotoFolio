@@ -21,7 +21,8 @@ export const ImagesList = ({ albumName, onBack }) => {
   // async function
   useEffect(() => {
     setLoading(true);
-    const unsub = subscribeToImages((snapshot) => {
+
+    const unsub = subscribeToImages(albumName, (snapshot) => {
       const imageData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
@@ -33,8 +34,10 @@ export const ImagesList = ({ albumName, onBack }) => {
       setLoading(false);
     })
 
+    // cleanup required
 
-  }, []);
+    
+  }, [albumName]);
 
   const [addImageIntent, setAddImageIntent] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
@@ -60,7 +63,7 @@ export const ImagesList = ({ albumName, onBack }) => {
   // async functions
   const handleAdd = async (title, imageUrl) => {
     try {
-      await addImage(title, imageUrl);
+      await addImage(albumName, title, imageUrl);
       toast.success("image added successfully");
     } catch (error) {
       toast.error("Could not create image");
