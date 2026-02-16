@@ -8,21 +8,23 @@ import { Carousel } from "../carousel/Carousel";
 import { toast } from "react-toastify";
 
 // importing firebase services
-import { addImage, subscribeToImages } from "../../services/images.service";
+import { addImage, subscribeToImages, deleteImage, updateImage } from "../../services/images.service";
 
-export const ImagesList = ({ albumName, onBack }) => {
+export const ImagesList = ({ selectedAlbum, onBack }) => {
 
   //These state and functions are create just for your convience you can create modify or delete the state as per your requirement.
   const [images, setImages] = useState([]);
+  const [filteredImages, setFilteredImages] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchIntent, setSearchIntent] = useState(false);
-  const searchInput = useRef();
+  const [searchTerm, setSearchTerm] = useState("");
+
 
   // async function
   useEffect(() => {
+    if (!selectedAlbum?.id) return;
     setLoading(true);
-
-    const unsub = subscribeToImages(albumName, (snapshot) => {
+    const unsubscribe = subscribeToImages(selectedAlbum.id, (snapshot) => {
       const imageData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data()
@@ -33,11 +35,10 @@ export const ImagesList = ({ albumName, onBack }) => {
       console.log(error);
       setLoading(false);
     })
-
-    // cleanup required
-
-    
-  }, [albumName]);
+    return () => {
+      unsubscribe && unsubscribe();
+    };
+  }, [selectedAlbum?.id]);
 
   const [addImageIntent, setAddImageIntent] = useState(false);
   const [imgLoading, setImgLoading] = useState(false);
@@ -47,25 +48,36 @@ export const ImagesList = ({ albumName, onBack }) => {
 
   // function to handle toggle next image
   const handleNext = () => {
+    setActiveImageIndex((prev) =>
+      Math.min(prev + 1, images.length - 1)
+    )
   };
+
   // function to handle toggle previous image
   const handlePrev = () => {
+    setActiveImageIndex((prev) =>
+      Math.max(prev - 1, 0))
   };
+
   // function to handle cancel  
-  const handleCancel = () => { };
+  const handleCancel = () => {
+    setActiveImageIndex(null);
+  };
+
   // function to handle search functionality for image
   const handleSearchClick = () => {
-  };
-  // function to handle search functionality for image
-  const handleSearch = async () => {
+    setSearchIntent((prev) => !prev)
   };
 
   // async functions
   const handleAdd = async (title, imageUrl) => {
+    setImgLoading(true);
     try {
-      await addImage(albumName, title, imageUrl);
+      await addImage(selectedAlbum.id, title, imageUrl);
       toast.success("image added successfully");
+      setImgLoading(false);
     } catch (error) {
+      setImgLoading(false);
       toast.error("Could not create image");
       console.log(error);
     }
@@ -73,19 +85,56 @@ export const ImagesList = ({ albumName, onBack }) => {
 
   // function to handle update image
   const handleUpdate = async ({ title, url }) => {
-  };
-  // function to handle delete image
-  const handleDelete = async (e, id) => {
+    setImgLoading(true);
+    try {
+      await updateImage(updateImageIntent.id, { title, url })
+      toast.success("image updated successfully");
+      setImgLoading(false);
+    } catch (error) {
+      toast.error("Could not update image");
+      console.log(error);
+      setImgLoading(false);
+    }
   };
 
-  if (!images.length && !searchInput.current?.value && !loading) {
+  useEffect(() => {
+    if (!searchTerm) {
+      setFilteredImages(images);
+    } else {
+      const lowerSearch = searchTerm.toLowerCase();
+      const result = images.filter((img) =>
+        img.title.toLowerCase().includes(lowerSearch)
+      );
+      setFilteredImages(result);
+    }
+  }, [images, searchTerm]);
+
+
+  // function to handle delete image
+  const handleDelete = async (e, id) => {
+    e.stopPropagation();
+
+    try {
+      // ui can also be added instead of this screen blocking confirm dial box
+      const shouldDelete = window.confirm('are you confirm that you want to delete this image ?')
+      if (!shouldDelete) return;
+      await deleteImage(id);
+      toast.success("image deleted successfully");
+    } catch (error) {
+      toast.error("Could not delete image");
+      console.log(error);
+    }
+
+  };
+
+  if (!images.length && !searchTerm && !loading) {
     return (
       <>
         <div className={styles.top}>
           <span onClick={onBack}>
             <img src="/assets/back.png" alt="back" />
           </span>
-          <h3>No images found in the album.</h3>
+          <h3>No images found in the {selectedAlbum.name}</h3>
           <button
             className={`${addImageIntent && styles.active}`}
             onClick={() => setAddImageIntent(prev => !prev)}
@@ -97,7 +146,8 @@ export const ImagesList = ({ albumName, onBack }) => {
           <ImageForm
             loading={imgLoading}
             onAdd={handleAdd}
-            albumName={albumName}
+            selectedAlbum={selectedAlbum}
+            setAddImageIntent={setAddImageIntent}
           />
         )}
       </>
@@ -109,9 +159,12 @@ export const ImagesList = ({ albumName, onBack }) => {
         <ImageForm
           loading={imgLoading}
           onAdd={handleAdd}
-          albumName={albumName}
+          selectedAlbum={selectedAlbum}
           onUpdate={handleUpdate}
           updateIntent={updateImageIntent}
+          setUpdateImageIntent={setUpdateImageIntent}
+          setAddImageIntent={setAddImageIntent}
+
         />
       )}
       {(activeImageIndex || activeImageIndex === 0) && (
@@ -127,14 +180,14 @@ export const ImagesList = ({ albumName, onBack }) => {
         <span onClick={onBack}>
           <img src="/assets/back.png" alt="back" />
         </span>
-        <h3>Images in {albumName}</h3>
+        <h3>Images in {selectedAlbum.name}</h3>
 
+        {/* search box */}
         <div className={styles.search}>
           {searchIntent && (
             <input
               placeholder="Search..."
-              onChange={handleSearch}
-              ref={searchInput}
+              onChange={(e) => setSearchTerm(e.target.value)}
               autoFocus={true}
             />
           )}
@@ -144,6 +197,9 @@ export const ImagesList = ({ albumName, onBack }) => {
             alt="clear"
           />
         </div>
+
+
+        {/* update image */}
         {updateImageIntent && (
           <button
             className={styles.active}
@@ -152,14 +208,17 @@ export const ImagesList = ({ albumName, onBack }) => {
             Cancel
           </button>
         )}
+
+
         {!updateImageIntent && (
           <button
             className={`${addImageIntent && styles.active}`}
-            onClick={() => setAddImageIntent(!addImageIntent)}
+            onClick={() => setAddImageIntent(prev => !prev)}
           >
             {!addImageIntent ? "Add image" : "Cancel"}
           </button>
         )}
+
       </div>
       {loading && (
         <div className={styles.loader}>
@@ -167,8 +226,9 @@ export const ImagesList = ({ albumName, onBack }) => {
         </div>
       )}
       {!loading && (
+        /* rendering images here */
         <div className={styles.imageList}>
-          {images.map((image, i) => (
+          {filteredImages.map((image, i) => (
             <div
               key={image.id}
               className={styles.image}
@@ -186,6 +246,7 @@ export const ImagesList = ({ albumName, onBack }) => {
               >
                 <img src="/assets/edit.png" alt="update" />
               </div>
+
               <div
                 className={`${styles.delete} ${activeHoverImageIndex === i && styles.active
                   }`}

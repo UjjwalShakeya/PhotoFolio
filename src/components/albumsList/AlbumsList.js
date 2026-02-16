@@ -7,7 +7,6 @@ import { AlbumForm } from "../albumForm/AlbumForm.js"
 import { toast } from "react-toastify";
 
 // importing service layer which makes the component easier to maintain,
-
 import { createAlbum, subscribeToAlbums } from "../../services/albums.service.js";
 import { ImagesList } from "../imagesList/ImagesList.js";
 
@@ -21,7 +20,7 @@ export const AlbumsList = () => {
   // improved for better naming convension
   const [isFetchingAlbums, setIsFetchingAlbums] = useState(false);
   const [isCreatingAlbum, setIsCreatingAlbum] = useState(false);
-  const [albumName, setAlbumName] = useState('');
+  const [selectedAlbum, setSelectedAlbum] = useState(null);
   const [togglePage, setTogglePage] = useState(false);
 
   // side effects
@@ -57,16 +56,16 @@ export const AlbumsList = () => {
       toast.error("Could not create album");
       console.log(error);
     }
-  }
+  };
 
   // handler to get name of album and hidding, showing albumlist or imagelist according to the condition
   const onBack = async () => {
     setTogglePage(prev => !prev)
   };
 
-  const handleSelect = async (name) => {
-    setAlbumName(name);
-    onBack();
+  const handleSelect = async (album) => {
+    setSelectedAlbum(album);
+    setTogglePage(true);
   };
 
 
@@ -79,7 +78,7 @@ export const AlbumsList = () => {
       {/* outer wrapper  */}
       <div className="wrapper">
 
-        {togglePage ? (<ImagesList albumName={albumName} onBack={onBack} />) : (
+        {togglePage ? (<ImagesList selectedAlbum={selectedAlbum} onBack={onBack} />) : (
           <>
 
             {/* header of application*/}
@@ -94,11 +93,14 @@ export const AlbumsList = () => {
             < div className={`${styles.albumsList}`}>
 
               {/* rendering albums here */}
-              {albums.map((album) => (
-                <div onClick={() => handleSelect(album.name)} key={album.id} className={`${styles.album}`}>
+              {albums.length === 0 ? (<h1 style={{ marginTop: "1rem", color: "blueviolet" }}>No albums yet. Create one.
+              </h1>) : albums.map((album) => (
+
+                <div onClick={() => handleSelect(album)} key={album.id} className={`${styles.album}`}>
                   <img src="/assets/photos.png" alt="album" />
                   <span>{album.name}</span>
                 </div>
+
               ))}
             </div>
 
